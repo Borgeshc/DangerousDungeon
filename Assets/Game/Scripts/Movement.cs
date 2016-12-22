@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityStandardAssets.CrossPlatformInput;
 
 public class Movement : MonoBehaviour
 {
@@ -42,7 +43,9 @@ public class Movement : MonoBehaviour
     private float lastGroundedTime = 0.0f;
     private bool isControllable = true;
     private Vector3 movement;
-
+    private bool ableToJump;
+    public bool isMobile;
+    public static bool canMove;
     void Start()
     {
         anim = GetComponent<Animator>();
@@ -51,6 +54,7 @@ public class Movement : MonoBehaviour
 
         lookRight = transform.rotation;
         lookLeft = lookRight * Quaternion.Euler(0, 180, 0);
+        canMove = true;
     }
     void Update()
     {
@@ -61,54 +65,61 @@ public class Movement : MonoBehaviour
         controller.Move(moveDirection * Time.deltaTime);
         anim.SetBool("IsRunning", false);
 
-        moveDirection = new Vector3((Input.GetAxis("Horizontal")), 0, 0);
-
-        if (Input.GetAxis("Horizontal") < 0 || Input.GetKey(KeyCode.A))
+        if(canMove)
         {
-            transform.rotation = lookLeft;
-            moveDirection = transform.TransformDirection(-moveDirection);
-            moveDirection *= speed;
+            moveDirection = isMobile ? new Vector3((CrossPlatformInputManager.GetAxis("Horizontal")), 0, 0) : new Vector3((Input.GetAxis("Horizontal")), 0, 0);
+            //  moveDirection = new Vector3((CrossPlatformInputManager.GetAxis("Horizontal")), 0, 0);
 
-            anim.SetBool("IsRunning", true);
-        }
-
-        if (Input.GetAxis("Horizontal") > 0 || Input.GetKey(KeyCode.D))
-        {
-            transform.rotation = lookRight;
-            moveDirection = transform.TransformDirection(moveDirection);
-            moveDirection *= speed;
-            anim.SetBool("IsRunning", true);
-        }
-
-        /// Jump Code
-        if (Input.GetButtonDown("Jump"))
-        {
-            lastJumpButtonTime = Time.time;
-        }
-        ApplyGravity();
-
-        ApplyJumping();
-
-        movement = moveDirection * moveSpeed + new Vector3(0, verticalSpeed, 0) + inAirVelocity;
-        movement *= Time.deltaTime;
-        
-        wallJumpContactNormal = Vector3.zero;
-        collisionFlags = controller.Move(movement);
-
-        if (IsGrounded())
-        {
-            anim.SetBool("IsRunJumping", false);
-            lastGroundedTime = Time.time;
-            inAirVelocity = Vector3.zero;
-            if (jumping)
+            if ((CrossPlatformInputManager.GetAxis("Horizontal")) < 0 || Input.GetKey(KeyCode.A) || (Input.GetAxis("Horizontal") < 0))
             {
-                jumping = false;
-            }
-        }
+                transform.rotation = lookLeft;
+                moveDirection = transform.TransformDirection(-moveDirection);
+                moveDirection *= speed;
 
-        if(verticalSpeed > 0f)
-        {
-            anim.SetBool("IsRunJumping", true);
+                anim.SetBool("IsRunning", true);
+            }
+
+            if ((CrossPlatformInputManager.GetAxis("Horizontal")) > 0 || Input.GetKey(KeyCode.D) || (Input.GetAxis("Horizontal") < 0))
+            {
+                transform.rotation = lookRight;
+                moveDirection = transform.TransformDirection(moveDirection);
+                moveDirection *= speed;
+                anim.SetBool("IsRunning", true);
+            }
+
+            /// Jump Code
+            if (Input.GetButtonDown("Jump") || MyMobileInput.jump && ableToJump)
+            {
+                ableToJump = false;
+                lastJumpButtonTime = Time.time;
+            }
+            ApplyGravity();
+
+            ApplyJumping();
+
+            movement = moveDirection * moveSpeed + new Vector3(0, verticalSpeed, 0) + inAirVelocity;
+            movement *= Time.deltaTime;
+
+            wallJumpContactNormal = Vector3.zero;
+            collisionFlags = controller.Move(movement);
+
+            if (IsGrounded())
+            {
+                anim.SetBool("IsRunJumping", false);
+                ableToJump = true;
+                lastGroundedTime = Time.time;
+                inAirVelocity = Vector3.zero;
+                if (jumping)
+                {
+                    jumping = false;
+                }
+            }
+
+            if (verticalSpeed > 0f)
+            {
+                anim.SetBool("IsRunJumping", true);
+            }
+
         }
     }
 
